@@ -21,15 +21,15 @@ TOPDIR := $(shell /bin/pwd)
 # Host Compiler Config
 #
 HOST_CC     = gcc
-HOST_CPP    = $(HOST_CC) -E
+HOST_CPP    = $(HOST_CC) -E -I$(TOPDIR)/include
 HOST_CFLAGS = -Wall -Werror -Wextra -O2 -I$(TOPDIR)/include
 
 #
 # Kernel Compiler Config
 #
 CC      = gcc -D__KERNEL__
-CPP     = $(CC) -E
-CFLAGS  = -ffreestanding -nostdinc -I?$(TOPDIR)/include \
+CPP     = $(CC) -E -I$(TOPDIR)/include
+CFLAGS  = -ffreestanding -nostdinc -I$(TOPDIR)/include \
 	-Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -pipe \
 	-fno-builtin -fno-stack-protector -fno-pie -no-pie \
 	-fno-strict-aliasing -fno-aggressive-loop-optimizations \
