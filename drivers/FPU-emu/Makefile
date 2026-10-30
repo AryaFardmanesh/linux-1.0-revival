@@ -6,7 +6,7 @@
 DEBUG	=
 PARANOID = -DPARANOID
 REENTRANT	= -DREENTRANT_FPU
-CFLAGS	:= $(CFLAGS) $(PARANOID) $(DEBUG) -fno-builtin
+CFLAGS	:= $(CFLAGS) $(PARANOID) $(DEBUG) -fno-builtin -I../../include
 
 .c.o:
 	$(CC) $(CFLAGS) $(MATH_EMULATION) -c $<
