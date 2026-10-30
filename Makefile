@@ -1,14 +1,64 @@
-VERSION = 1
-PATCHLEVEL = 0
-SUBLEVEL = 9
+#
+# Linux Kernel v1.0 Build System
+#
 
-all:	Version zImage
+#
+# Kernel Version
+#
+MAJOR_VERSION = 1
+MINOR_VERSION = 0
+PATCH_VERSION = 9
+
+#
+# Host Compiler Config
+#
+HOST_CC     = gcc
+HOST_CPP    = $(HOST_CC) -E
+HOST_CFLAGS = -Wall -Werror -Wextra -O2 -Iinclude
+
+#
+# Kernel Compiler Config
+#
+CC      = gcc -D__KERNEL__
+CPP     = $(CC) -E
+CFLAGS  = -ffreestanding -nostdinc -Iinclude \
+	-Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -pipe \
+	-fno-builtin -fno-stack-protector -fno-pie -no-pie \
+	-fno-strict-aliasing -fno-aggressive-loop-optimizations \
+	-Wno-error
+AS      = nasm -f elf32
+LD      = ld
+LDFLAGS = -m elf_i386
+
+
+#
+# Bootloader Assembler Config
+#
+BOOT_AS = nasm -f bin
+
+#
+# Tools Config
+#
+AR    = ar
+MAKE  = make
+STRIP = strip
+
+#
+# Compiled Files
+#
+ARCHIVES    = kernel/kernel.o mm/mm.o fs/fs.o net/net.o ipc/ipc.o
+FILESYSTEMS = fs/filesystems.a
+DRIVERS     = drivers/block/block.a drivers/char/char.a drivers/net/net.a ibcs/ibcs.o
+LIBS        = lib/lib.a
+SUBDIRS     = kernel drivers mm fs net ipc ibcs lib
+
+KERNELHDRS  = /usr/src/linux/include
 
 .EXPORT_ALL_VARIABLES:
 
 CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
-	  else if [ -x /bin/bash ]; then echo /bin/bash; \
-	  else echo sh; fi ; fi)
+	else if [ -x /bin/bash ]; then echo /bin/bash; \
+	else echo sh; fi ; fi)
 
 #
 # Make "config" the default target if there is no configuration file or
@@ -34,7 +84,6 @@ endif
 # This can be either FLOPPY, CURRENT, /dev/xxxx or empty, in which case
 # the default of FLOPPY is used by 'build'.
 #
-
 ROOT_DEV = CURRENT
 
 #
@@ -43,76 +92,37 @@ ROOT_DEV = CURRENT
 # Set it to -DSVGA_MODE=NORMAL_VGA if you just want the EGA/VGA mode.
 # The number is the same as you would ordinarily press at bootup.
 #
-
-SVGA_MODE=	-DSVGA_MODE=NORMAL_VGA
-
-#
-# standard CFLAGS
-#
-
-CFLAGS = -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -pipe
+SVGA_MODE = -DSVGA_MODE=NORMAL_VGA
 
 ifdef CONFIG_CPP
 CFLAGS := $(CFLAGS) -x c++
 endif
 
 ifdef CONFIG_M486
-CFLAGS := $(CFLAGS) -m486
+CFLAGS := $(CFLAGS) -m32 -march=i486
 else
-CFLAGS := $(CFLAGS) -m386
+CFLAGS := $(CFLAGS) -m32 -march=i386
 endif
 
 #
 # if you want the ram-disk device, define this to be the
 # size in blocks.
 #
-
 #RAMDISK = -DRAMDISK=512
 
-AS86	=i686-linux-gnu-as -0 -a
-LD86	=i686-linux-gnu-ld -0
-
-AS	=i686-linux-gnu-as
-LD	=i686-linux-gnu-ld
-LDFLAGS	=#-qmagic
-HOSTCC	=gcc-4.8
-CC	=gcc-4.8 -D__KERNEL__
-MAKE	=make
-CPP	=$(CC) -E
-AR	=i686-linux-gnu-ar
-STRIP	=i686-linux-gnu-strip
-
-ARCHIVES	=kernel/kernel.o mm/mm.o fs/fs.o net/net.o ipc/ipc.o
-FILESYSTEMS	=fs/filesystems.a
-DRIVERS		=drivers/block/block.a \
-		 drivers/char/char.a \
-		 drivers/net/net.a \
-		 ibcs/ibcs.o
-LIBS		=lib/lib.a
-SUBDIRS		=kernel drivers mm fs net ipc ibcs lib
-
-KERNELHDRS	=/usr/src/linux/include
-
-ifdef CONFIG_SCSI
-DRIVERS := $(DRIVERS) drivers/scsi/scsi.a
-endif
-
-ifdef CONFIG_SOUND
-DRIVERS := $(DRIVERS) drivers/sound/sound.a
-endif
-
-ifdef CONFIG_MATH_EMULATION
-DRIVERS := $(DRIVERS) drivers/FPU-emu/math.a
-endif
+#
+# Commands
+#
+all: version zImage
 
 .c.s:
 	$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
-	$(AS) -c -o $*.o $<
+	$(AS) -o $*.o $<
 .c.o:
 	$(CC) $(CFLAGS) -c -o $*.o $<
 
-Version: dummy
+version: dummy
 	rm -f tools/version.h
 
 config:
@@ -129,7 +139,7 @@ tools/./version.h: tools/version.h
 
 tools/version.h: $(CONFIGURE) Makefile
 	@./makever.sh
-	@echo \#define UTS_RELEASE \"$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)\" > tools/version.h
+	@echo \#define UTS_RELEASE \"$(MAJOR_VERSION).$(MINOR_VERSION).$(PATCH_VERSION)\" > tools/version.h
 	@echo \#define UTS_VERSION \"\#`cat .version` `date`\" >> tools/version.h
 	@echo \#define LINUX_COMPILE_TIME \"`date +%T`\" >> tools/version.h
 	@echo \#define LINUX_COMPILE_BY \"`whoami`\" >> tools/version.h
@@ -137,7 +147,7 @@ tools/version.h: $(CONFIGURE) Makefile
 	@echo \#define LINUX_COMPILE_DOMAIN \"`domainname`\" >> tools/version.h
 
 tools/build: tools/build.c $(CONFIGURE)
-	$(HOSTCC) $(CFLAGS) -o $@ $<
+	$(HOST_CC) $(HOST_CFLAGS) -o $@ $<
 
 boot/head.o: $(CONFIGURE) boot/head.s
 
@@ -149,30 +159,24 @@ tools/version.o: tools/version.c tools/version.h
 init/main.o: $(CONFIGURE) init/main.c
 	$(CC) $(CFLAGS) $(PROFILING) -c -o $*.o $<
 
-tools/system:	boot/head.o init/main.o tools/version.o linuxsubdirs
+tools/system: boot/head.o init/main.o tools/version.o linuxsubdirs
 	$(LD) $(LDFLAGS) -Ttext 1000 boot/head.o init/main.o tools/version.o \
 		$(ARCHIVES) \
 		$(FILESYSTEMS) \
 		$(DRIVERS) \
 		$(LIBS) \
 		-o tools/system
-	nm tools/zSystem | grep -v '\(compiled\)\|\(\.o$$\)\|\( a \)' | \
+	$(NM) tools/zSystem | grep -v '\\(compiled\\)\|\\(\.o$$\\)\|\\( a \\)' | \
 		sort > System.map
 
-boot/setup: boot/setup.o
-	$(LD86) -s -o $@ $<
-
-boot/setup.o: boot/setup.s
-	$(AS86) -o $@ $<
+boot/setup: boot/setup.s
+	$(BOOT_AS) -o $@ $<
 
 boot/setup.s: boot/setup.S $(CONFIGURE) include/linux/config.h Makefile
 	$(CPP) -traditional $(SVGA_MODE) $(RAMDISK) $< -o $@
 
-boot/bootsect: boot/bootsect.o
-	$(LD86) -s -o $@ $<
-
-boot/bootsect.o: boot/bootsect.s
-	$(AS86) -o $@ $<
+boot/bootsect: boot/bootsect.s
+	$(BOOT_AS) -o $@ $<
 
 boot/bootsect.s: boot/bootsect.S $(CONFIGURE) include/linux/config.h Makefile
 	$(CPP) -traditional $(SVGA_MODE) $(RAMDISK) $< -o $@
@@ -201,7 +205,7 @@ tools/zSystem:	boot/head.o init/main.o tools/version.o linuxsubdirs
 		$(DRIVERS) \
 		$(LIBS) \
 		-o tools/zSystem
-	nm tools/zSystem | grep -v '\(compiled\)\|\(\.o$$\)\|\( a \)' | \
+	$(NM) tools/zSystem | grep -v '\\(compiled\\)\|\\(\.o$$\\)\|\\( a \\)' | \
 		sort > zSystem.map
 
 fs: dummy
@@ -255,6 +259,9 @@ depend dep:
 	rm -f tools/version.h
 	mv .tmpdepend .depend
 
+run: zImage
+	qemu-system-i386 -kernel zImage -serial stdio
+
 ifdef CONFIGURATION
 ..$(CONFIGURATION):
 	@echo
@@ -273,28 +280,3 @@ else
 dummy:
 
 endif
-
-#
-# Leave these dummy entries for now to tell people that they are going away..
-#
-lilo:
-	@echo
-	@echo Uncompressed kernel images no longer supported. Use
-	@echo \"make zlilo\" instead.
-	@echo
-	@exit 1
-
-Image:
-	@echo
-	@echo Uncompressed kernel images no longer supported. Use
-	@echo \"make zImage\" instead.
-	@echo
-	@exit 1
-
-disk:
-	@echo
-	@echo Uncompressed kernel images no longer supported. Use
-	@echo \"make zdisk\" instead.
-	@echo
-	@exit 1
-
