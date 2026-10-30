@@ -9,19 +9,27 @@ MAJOR_VERSION = 1
 MINOR_VERSION = 0
 PATCH_VERSION = 9
 
+.EXPORT_ALL_VARIABLES:
+
+CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
+	else if [ -x /bin/bash ]; then echo /bin/bash; \
+	else echo sh; fi ; fi)
+
+TOPDIR := $(shell /bin/pwd)
+
 #
 # Host Compiler Config
 #
 HOST_CC     = gcc
 HOST_CPP    = $(HOST_CC) -E
-HOST_CFLAGS = -Wall -Werror -Wextra -O2 -Iinclude
+HOST_CFLAGS = -Wall -Werror -Wextra -O2 -I$(TOPDIR)/include
 
 #
 # Kernel Compiler Config
 #
 CC      = gcc -D__KERNEL__
 CPP     = $(CC) -E
-CFLAGS  = -ffreestanding -nostdinc -Iinclude \
+CFLAGS  = -ffreestanding -nostdinc -I?$(TOPDIR)/include \
 	-Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -pipe \
 	-fno-builtin -fno-stack-protector -fno-pie -no-pie \
 	-fno-strict-aliasing -fno-aggressive-loop-optimizations \
@@ -53,12 +61,6 @@ LIBS        = lib/lib.a
 SUBDIRS     = kernel drivers mm fs net ipc ibcs lib
 
 KERNELHDRS  = /usr/src/linux/include
-
-.EXPORT_ALL_VARIABLES:
-
-CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
-	else if [ -x /bin/bash ]; then echo /bin/bash; \
-	else echo sh; fi ; fi)
 
 #
 # Make "config" the default target if there is no configuration file or
