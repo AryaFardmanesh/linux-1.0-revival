@@ -1,3 +1,11 @@
+  Linux 1.0 Revival Project
+
+  Modernization, toolchain porting, and build system enhancements:
+  Copyright (C) 2026 Arya Fardmanesh
+
+  Original Linux Kernel 1.0 source code:
+  Copyright (C) 1991-1994 Linus Torvalds and original Linux contributors.
+  See docs/historical/CREDITS for the original contributor listing.
 
    NOTE! This copyright does *not* cover user programs that use kernel
  services by normal system calls - this is merely considered normal use
